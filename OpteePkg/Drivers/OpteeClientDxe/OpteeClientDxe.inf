@@ -1,0 +1,50 @@
+#/** @file
+#
+#  OP-TEE Client
+#
+#  Copyright (c) 2020, Linaro Ltd. All rights reserved.<BR>
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x0001001A
+  BASE_NAME                      = OpteeClientDxe
+  FILE_GUID                      = AFB39D34-F808-4D9E-A3DA-7F49A235A74A
+  MODULE_TYPE                    = DXE_RUNTIME_DRIVER
+  VERSION_STRING                 = 0.1
+  ENTRY_POINT                    = OpteeClientInitialize
+
+[Sources]
+  OpteeClientDxe.c
+
+[Sources.AARCH64]
+  AArch64/OpteeClient.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  OpteePkg/OpteePkg.dec
+
+[Packages.AARCH64]
+  ArmPkg/ArmPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  DxeServicesTableLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  UefiRuntimeLib
+  UefiRuntimeServicesTableLib
+
+[LibraryClasses.AARCH64]
+  ArmMmuLib
+  ArmSmcLib
+
+[Protocols]
+  gOpteeClientProtocolGuid                    # PRODUCES
+
+[Depex]
+  TRUE
