@@ -1,0 +1,21 @@
+## @file  OpteePkg.dec
+#
+#  OP-TEE package
+#
+#  Copyright (c) 2020, Linaro Ltd. All rights reserved.<BR>
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  DEC_SPECIFICATION              = 0x00010005
+  PACKAGE_NAME                   = OpteePkg
+  PACKAGE_GUID                   = 1649F9F4-8498-47CE-8812-8A0F33ABB4EC
+  PACKAGE_VERSION                = 0.1
+
+[Includes]
+  Include
+
+[Protocols]
+  gOpteeClientProtocolGuid = { 0x934251e6, 0x1891, 0x4833, { 0xbb, 0xd5, 0x29, 0xac, 0xd3, 0xaf, 0x2f, 0x80 } }
