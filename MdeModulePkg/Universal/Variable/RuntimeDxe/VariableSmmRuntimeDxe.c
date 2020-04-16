@@ -814,7 +814,8 @@ RuntimeServiceGetVariable (
   }
 
   AcquireLockOnlyAtBootTime (&mVariableServicesLock);
-  if (FeaturePcdGet (PcdEnableVariableRuntimeCache)) {
+//  if (FeaturePcdGet (PcdEnableVariableRuntimeCache)) {
+  if (0) {
     Status = FindVariableInRuntimeCache (VariableName, VendorGuid, Attributes, DataSize, Data);
   } else {
     Status = FindVariableInSmm (VariableName, VendorGuid, Attributes, DataSize, Data);
@@ -1039,7 +1040,8 @@ RuntimeServiceGetNextVariableName (
   }
 
   AcquireLockOnlyAtBootTime (&mVariableServicesLock);
-  if (FeaturePcdGet (PcdEnableVariableRuntimeCache)) {
+//  if (FeaturePcdGet (PcdEnableVariableRuntimeCache)) {
+  if (0) {
     Status = GetNextVariableNameInRuntimeCache (VariableNameSize, VariableName, VendorGuid);
   } else {
     Status = GetNextVariableNameInSmm (VariableNameSize, VariableName, VendorGuid);
@@ -1277,7 +1279,8 @@ OnReadyToBoot (
   //
   // Install the system configuration table for variable info data captured
   //
-  if (FeaturePcdGet (PcdEnableVariableRuntimeCache) && FeaturePcdGet (PcdVariableCollectStatistics)) {
+  //if (FeaturePcdGet (PcdEnableVariableRuntimeCache) && FeaturePcdGet (PcdVariableCollectStatistics)) {
+  if (0) {
     if (mVariableAuthFormat) {
       gBS->InstallConfigurationTable (&gEfiAuthenticatedVariableGuid, mVariableInfo);
     } else {
@@ -1578,7 +1581,8 @@ SmmVariableReady (
   //
   mVariableBufferPhysical = mVariableBuffer;
 
-  if (FeaturePcdGet (PcdEnableVariableRuntimeCache)) {
+//  if (FeaturePcdGet (PcdEnableVariableRuntimeCache)) {
+  if (0) {
     DEBUG ((DEBUG_INFO, "Variable driver runtime cache is enabled.\n"));
     //
     // Allocate runtime variable cache memory buffers.

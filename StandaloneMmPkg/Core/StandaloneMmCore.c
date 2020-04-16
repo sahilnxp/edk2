@@ -341,7 +341,7 @@ MmEntryPoint (
   EFI_STATUS                  Status;
   EFI_MM_COMMUNICATE_HEADER  *CommunicateHeader;
 
-  DEBUG ((DEBUG_INFO, "MmEntryPoint ...\n"));
+  //DEBUG ((DEBUG_ERROR, "MmEntryPoint ...\n"));
 
   //
   // Update MMST using the context
@@ -409,7 +409,7 @@ MmEntryPoint (
   //
   gMmCorePrivate->InMm = FALSE;
 
-  DEBUG ((DEBUG_INFO, "MmEntryPoint Done\n"));
+  //DEBUG ((DEBUG_INFO, "MmEntryPoint Done\n"));
 }
 
 EFI_STATUS

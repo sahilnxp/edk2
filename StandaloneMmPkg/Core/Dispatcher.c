@@ -646,6 +646,8 @@ MmDispatcher (
                                                                mEfiSystemTable
                                                                );
       }
+      DEBUG ((DEBUG_ERROR, "**** %a, %u Status = %lx \n", __FUNCTION__, __LINE__, Status));
+
       if (EFI_ERROR(Status)) {
         DEBUG ((DEBUG_INFO, "StartImage Status - %r\n", Status));
         MmFreePages(DriverEntry->ImageBuffer, DriverEntry->NumberOfPage);

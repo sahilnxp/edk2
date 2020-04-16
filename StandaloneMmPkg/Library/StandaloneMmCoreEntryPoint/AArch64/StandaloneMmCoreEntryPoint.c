@@ -112,13 +112,13 @@ DelegatedEventLoop (
 
   while (TRUE) {
     ArmCallSvc (EventCompleteSvcArgs);
-
-    DEBUG ((DEBUG_INFO, "Received delegated event\n"));
-    DEBUG ((DEBUG_INFO, "X0 :  0x%x\n", (UINT32) EventCompleteSvcArgs->Arg0));
-    DEBUG ((DEBUG_INFO, "X1 :  0x%x\n", (UINT32) EventCompleteSvcArgs->Arg1));
-    DEBUG ((DEBUG_INFO, "X2 :  0x%x\n", (UINT32) EventCompleteSvcArgs->Arg2));
-    DEBUG ((DEBUG_INFO, "X3 :  0x%x\n", (UINT32) EventCompleteSvcArgs->Arg3));
-
+#if DEBUG_PRINTS_STMM
+    DEBUG ((DEBUG_ERROR, "Received delegated event\n"));
+    DEBUG ((DEBUG_ERROR, "X0 :  0x%x\n", (UINT32) EventCompleteSvcArgs->Arg0));
+    DEBUG ((DEBUG_ERROR, "X1 :  0x%x\n", (UINT32) EventCompleteSvcArgs->Arg1));
+    DEBUG ((DEBUG_ERROR, "X2 :  0x%x\n", (UINT32) EventCompleteSvcArgs->Arg2));
+    DEBUG ((DEBUG_ERROR, "X3 :  0x%x\n", (UINT32) EventCompleteSvcArgs->Arg3));
+#endif
     Status = CpuDriverEntryPoint (
                EventCompleteSvcArgs->Arg0,
                EventCompleteSvcArgs->Arg3,

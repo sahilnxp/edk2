@@ -70,7 +70,7 @@ PiMmStandaloneArmTfCpuDriverEntry (
   EFI_STATUS                  Status;
   UINTN                       NsCommBufferSize;
 
-  DEBUG ((DEBUG_INFO, "Received event - 0x%x on cpu %d\n", EventId, CpuNumber));
+//  DEBUG ((DEBUG_INFO, "Received event - 0x%x on cpu %d\n", EventId, CpuNumber));
 
   Status = EFI_SUCCESS;
   //
@@ -194,11 +194,11 @@ PiMmCpuTpFwRootMmiHandler (
   CpuNumber = mMmst->CurrentlyExecutingCpu;
   if (!PerCpuGuidedEventContext[CpuNumber])
     return EFI_NOT_FOUND;
-
+#if 0
   DEBUG ((DEBUG_INFO, "CommBuffer - 0x%x, CommBufferSize - 0x%x\n",
           PerCpuGuidedEventContext[CpuNumber],
           PerCpuGuidedEventContext[CpuNumber]->MessageLength));
-
+#endif
   Status = mMmst->MmiManage (
                     &PerCpuGuidedEventContext[CpuNumber]->HeaderGuid,
                     NULL,

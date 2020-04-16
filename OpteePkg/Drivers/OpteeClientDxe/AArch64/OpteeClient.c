@@ -81,6 +81,8 @@ OpteeSharedMemoryRemap (
   PhysicalAddress = Start;
   Size = End - Start;
 
+  DEBUG ((DEBUG_ERROR, "*** Share Memory Start = %lx, End = %lx, Size = %lu****\n",
+		Start, End, Size));
   if (Size < SIZE_4KB) {
     DEBUG ((DEBUG_WARN, "OP-TEE shared memory too small\n"));
     return EFI_BUFFER_TOO_SMALL;
@@ -119,6 +121,14 @@ OpteeSharedMemoryRemap (
   OpteeSharedMemoryInformation.VirtualBase = (UINTN)PhysicalAddress;
   OpteeSharedMemoryInformation.Size = Size;
 
+  DEBUG ((DEBUG_ERROR, "PhysicalBase = %lx, VirtualBase = %lx, Size = %u\n",
+		OpteeSharedMemoryInformation.PhysicalBase,
+		OpteeSharedMemoryInformation.VirtualBase,
+		OpteeSharedMemoryInformation.Size));
+  DEBUG ((DEBUG_ERROR, "Addresses PhysicalBase = %p, VirtualBase = %p, Size = %p\n",
+		&OpteeSharedMemoryInformation.PhysicalBase,
+		&OpteeSharedMemoryInformation.VirtualBase,
+		&OpteeSharedMemoryInformation.Size));
   return EFI_SUCCESS;
 
 #if 0
@@ -140,6 +150,7 @@ OpteeInit (
 {
   EFI_STATUS      Status;
 
+  DEBUG ((DEBUG_ERROR, "***** %a, %u *****\n", __FUNCTION__, __LINE__));
   if (!IsOpteePresent ()) {
     DEBUG ((DEBUG_WARN, "OP-TEE not present\n"));
     return EFI_UNSUPPORTED;
@@ -173,10 +184,15 @@ ArchSetVirtualAddressMap (
   VOID
   )
 {
+  DEBUG ((DEBUG_ERROR, "***** %a, %u, Virt Adddr = %lx ***\n",
+		__FUNCTION__, __LINE__, &OpteeSharedMemoryInformation.VirtualBase));
+#if 0
   return EfiConvertPointer (
             0x0,
             (VOID **)&OpteeSharedMemoryInformation.VirtualBase
             );
+#endif
+  return EFI_SUCCESS;
 }
 
 STATIC
