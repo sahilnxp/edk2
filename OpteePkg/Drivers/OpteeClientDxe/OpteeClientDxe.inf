@@ -47,4 +47,4 @@
   gOpteeClientProtocolGuid                    # PRODUCES
 
 [Depex]
-  TRUE
+  gEfiCpuArchProtocolGuid
