@@ -103,7 +103,6 @@ OpteeSharedMemoryRemap (
   }
 
   // FIXME: fail to set comm buffer region's attributes
-#if 0
   Status = gDS->SetMemorySpaceAttributes (
                   PhysicalAddress,
                   Size,
@@ -113,7 +112,6 @@ OpteeSharedMemoryRemap (
     DEBUG ((DEBUG_ERROR, "Failed to set OP-TEE comm buffer attributes\n"));
     goto CleanAddedMemorySpace;
   }
-#endif
 
   OpteeSharedMemoryInformation.PhysicalBase = (UINTN)PhysicalAddress;
   OpteeSharedMemoryInformation.VirtualBase = (UINTN)PhysicalAddress;
@@ -121,7 +119,6 @@ OpteeSharedMemoryRemap (
 
   return EFI_SUCCESS;
 
-#if 0
 CleanAddedMemorySpace:
   gDS->RemoveMemorySpace (
          PhysicalAddress,
@@ -129,7 +126,6 @@ CleanAddedMemorySpace:
          );
 
   return Status;
-#endif
 }
 
 EFI_STATUS
@@ -173,13 +169,10 @@ ArchSetVirtualAddressMap (
   VOID
   )
 {
-#if 0
   return EfiConvertPointer (
-            0x0,
-            (VOID **)&OpteeSharedMemoryInformation.VirtualBase
-            );
-#endif
-  return EFI_SUCCESS;
+           0x0,
+           (VOID **)&OpteeSharedMemoryInformation.VirtualBase
+           );
 }
 
 STATIC
