@@ -22,7 +22,7 @@
 [Packages]
   ArmPkg/ArmPkg.dec
   MdePkg/MdePkg.dec
-  OpteePkg/OpteePkg.dec
+#  OpteePkg/OpteePkg.dec
 
 [LibraryClasses]
   BaseLib
@@ -34,10 +34,11 @@
   UefiLib
   UefiRuntimeLib
   UefiRuntimeServicesTableLib
+  OpteeLib
 
 [Protocols]
   gEfiMmCommunicationProtocolGuid              ## PRODUCES
-  gOpteeClientProtocolGuid                     ## CONSUMES
+#  gOpteeClientProtocolGuid                     ## CONSUMES
 
 [Guids]
   gEfiEndOfDxeEventGroupGuid
@@ -45,4 +46,5 @@
   gEfiEventReadyToBootGuid
 
 [Depex]
-  gOpteeClientProtocolGuid
+  TRUE
+#  gOpteeClientProtocolGuid

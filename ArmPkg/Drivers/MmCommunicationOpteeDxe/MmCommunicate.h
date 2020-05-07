@@ -13,7 +13,7 @@
 #include <Uefi.h>
 
 #include <Protocol/MmCommunication.h>
-#include <Protocol/OpteeClient.h>
+//#include <Protocol/OpteeClient.h>
 
 #include <Library/BaseMemoryLib.h>
 #include <Library/BaseLib.h>
@@ -24,6 +24,7 @@
 #include <Library/UefiLib.h>
 #include <Library/UefiRuntimeLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
+#include <Library/OpteeLib.h>
 
 #include <IndustryStandard/ArmStdSmc.h>
 
@@ -51,7 +52,7 @@ struct _OPTEE_MM_SESSION {
   UINT32                            Signature;
   EFI_HANDLE                        Handle;
   EFI_HANDLE                        AgentHandle;
-  OPTEE_CLIENT_PROTOCOL             *Client;
+//  OPTEE_CLIENT_PROTOCOL             *Client;
   EFI_MM_COMMUNICATION_PROTOCOL     Mm;
   UINT32                            Session;
 };

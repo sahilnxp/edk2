@@ -36,19 +36,13 @@ OpteeStatusToEfi (
 
 STATIC
 UINT32
-NewSession (
-  IN OPTEE_CLIENT_PROTOCOL   *Client
-  )
+NewSession ()
 {
   OPTEE_OPEN_SESSION_ARG        OpenArg;
 
-  if (Client == NULL) {
-    return 0;
-  }
-
   SetMem (&OpenArg, 0, sizeof (OpenArg));
   CopyGuid (&OpenArg.Uuid, &MmUuid);
-  Client->OpenSession (Client, &OpenArg);
+  OpteeOpenSession (&OpenArg);
   return OpenArg.Session;
 }
 
@@ -63,7 +57,7 @@ MmCommunicate (
 {
   EFI_STATUS                    Status;
   OPTEE_MM_SESSION              *OpteeMm;
-  OPTEE_CLIENT_PROTOCOL         *Client;
+  //OPTEE_CLIENT_PROTOCOL         *Client;
   OPTEE_INVOKE_FUNCTION_ARG     InvokeArg;
 
   if (This == NULL || CommBuffer == NULL ||
@@ -72,15 +66,11 @@ MmCommunicate (
   }
 
   OpteeMm = OPTEE_MM_SESSION_FROM_MM_COMMUNICATION_PROTOCOL_THIS (This);
-  Client = OpteeMm->Client;
-  if (Client == NULL) {
-    return EFI_NOT_READY;
-  }
   if (OpteeMm->Session != 0) {
     return EFI_OUT_OF_RESOURCES;
   }
 
-  OpteeMm->Session = NewSession (Client);
+  OpteeMm->Session = NewSession ();
   if (OpteeMm->Session == 0) {
     return EFI_ACCESS_DENIED;
   }
@@ -93,7 +83,7 @@ MmCommunicate (
   InvokeArg.Params[0].Union.Memory.Size = *CommSize;
   InvokeArg.Params[1].Attribute = OPTEE_MESSAGE_ATTRIBUTE_TYPE_VALUE_OUTPUT;
 
-  Status = Client->InvokeFunc (Client, &InvokeArg);
+  Status = OpteeInvokeFunction (&InvokeArg);
   if ((Status != EFI_SUCCESS) ||
       (InvokeArg.Return != OPTEE_SUCCESS)) {
     DEBUG ((DEBUG_ERROR, "OP-TEE Invoke Function failed with "
@@ -109,7 +99,7 @@ MmCommunicate (
   }
 
 CLOSE_SESSION:
-  Client->CloseSession (Client, OpteeMm->Session);
+  OpteeCloseSession (OpteeMm->Session);
   OpteeMm->Session = 0;
 
   return Status;
@@ -117,20 +107,18 @@ CLOSE_SESSION:
 
 STATIC
 EFI_STATUS
-GetMmCompatibility (
-  IN OPTEE_CLIENT_PROTOCOL    *Client
-  )
+GetMmCompatibility ()
 {
   UINT32      Session;
 
-  Session = NewSession (Client);
+  Session = NewSession ();
   if (Session == 0) {
     return EFI_ACCESS_DENIED;
   }
 
   // TODO: check mm version once the OPTEE_TA_MM_FUNC_VERSION is supported
 
-  Client->CloseSession (Client, Session);
+  OpteeCloseSession (Session);
   return EFI_SUCCESS;
 }
 
@@ -138,7 +126,7 @@ STATIC OPTEE_MM_SESSION mOpteeMm = {
   OPTEE_MM_SESSION_SIGNATURE,         // Signature
   NULL,                               // Handle
   NULL,                               // AgentHandle
-  NULL,                               // Client
+//  NULL,                               // Client
   {
     MmCommunicate, 
   },                                  // Mm
@@ -155,9 +143,9 @@ NotifySetVirtualAddressMap (
   IN VOID      *Context
   )
 {
+#if 0
   DEBUG ((DEBUG_ERROR, "Handle = %p, AgentHandle = %p, Client = %p, Communicate = %p\n",
 		&mOpteeMm.Handle, &mOpteeMm.AgentHandle, &mOpteeMm.Client, &mOpteeMm.Mm.Communicate));
-#if 0
   EFI_STATUS  Status;
   Status = EfiConvertPointer (0x0, (VOID **)&mOpteeMm.Handle);
   ASSERT_EFI_ERROR (Status);
@@ -208,10 +196,10 @@ MmCommunicationInitialize (
   )
 {
   EFI_STATUS      Status;
-  EFI_HANDLE      *HandleBuffer;
-  UINTN           HandleCount;
+//  EFI_HANDLE      *HandleBuffer;
+//  UINTN           HandleCount;
   UINTN           Index;
-
+#if 0
   Status = gBS->LocateHandleBuffer (
                   ByProtocol,
                   &gOpteeClientProtocolGuid,
@@ -234,8 +222,13 @@ MmCommunicationInitialize (
                   EFI_OPEN_PROTOCOL_BY_DRIVER
                   );
   ASSERT_EFI_ERROR (Status);
+#endif
+  Status = OpteeInit ();
+  if (EFI_ERROR (Status)) {
+    return EFI_UNSUPPORTED;
+  }
 
-  Status = GetMmCompatibility (mOpteeMm.Client);
+  Status = GetMmCompatibility ();
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "MM: Incompatible MM version\n"));
     goto CloseProtocol;
@@ -283,12 +276,13 @@ CloseGuidedEvents:
     gBS->CloseEvent (&mGuidedEvent[Index]);
   }
 CloseProtocol:
+#if 0
   gBS->CloseProtocol (
           mOpteeMm.Handle,
           &gOpteeClientProtocolGuid,
           mOpteeMm.AgentHandle,
           mOpteeMm.Handle
           );
-
+#endif
   return Status;
 }
