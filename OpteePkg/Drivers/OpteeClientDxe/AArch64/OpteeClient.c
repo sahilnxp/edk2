@@ -173,10 +173,13 @@ ArchSetVirtualAddressMap (
   VOID
   )
 {
+#if 0
   return EfiConvertPointer (
             0x0,
             (VOID **)&OpteeSharedMemoryInformation.VirtualBase
             );
+#endif
+  return EFI_SUCCESS;
 }
 
 STATIC

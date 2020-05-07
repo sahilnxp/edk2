@@ -155,8 +155,10 @@ NotifySetVirtualAddressMap (
   IN VOID      *Context
   )
 {
+  DEBUG ((DEBUG_ERROR, "Handle = %p, AgentHandle = %p, Client = %p, Communicate = %p\n",
+		&mOpteeMm.Handle, &mOpteeMm.AgentHandle, &mOpteeMm.Client, &mOpteeMm.Mm.Communicate));
+#if 0
   EFI_STATUS  Status;
-
   Status = EfiConvertPointer (0x0, (VOID **)&mOpteeMm.Handle);
   ASSERT_EFI_ERROR (Status);
   Status = EfiConvertPointer (0x0, (VOID **)&mOpteeMm.AgentHandle);
@@ -165,6 +167,7 @@ NotifySetVirtualAddressMap (
   ASSERT_EFI_ERROR (Status);
   Status = EfiConvertPointer (0x0, (VOID **)&mOpteeMm.Mm.Communicate);
   ASSERT_EFI_ERROR (Status);
+#endif
 }
 
 STATIC EFI_GUID* CONST mGuidedEventGuid[] = {
