@@ -143,6 +143,7 @@ NotifySetVirtualAddressMap (
   IN VOID      *Context
   )
 {
+  DEBUG ((DEBUG_ERROR, "%a, %u\n", __FUNCTION__, __LINE__));
 #if 0
   DEBUG ((DEBUG_ERROR, "Handle = %p, AgentHandle = %p, Client = %p, Communicate = %p\n",
 		&mOpteeMm.Handle, &mOpteeMm.AgentHandle, &mOpteeMm.Client, &mOpteeMm.Mm.Communicate));

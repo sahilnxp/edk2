@@ -14,12 +14,22 @@
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 #include <Library/OpteeLib.h>
+#include <Library/DxeServicesTableLib.h>
+#include <Library/UefiRuntimeLib.h>
+#include <Library/UefiBootServicesTableLib.h>
+#include <Library/UefiRuntimeServicesTableLib.h>
 
 #include <IndustryStandard/ArmStdSmc.h>
 #include <OpteeSmc.h>
 #include <Uefi.h>
 
 STATIC OPTEE_SHARED_MEMORY_INFORMATION OpteeSharedMemoryInformation = { 0 };
+
+STATIC EFI_EVENT mSetVirtualAddressMapEvent;
+
+EFI_PHYSICAL_ADDRESS PhysicalAddress = 0;
+
+EFI_PHYSICAL_ADDRESS VirtualAddress = 0;
 
 /**
   Check for OP-TEE presence.
@@ -89,12 +99,77 @@ OpteeSharedMemoryRemap (
     return Status;
   }
 
-  OpteeSharedMemoryInformation.Base = (UINTN)PhysicalAddress;
+  Status = gDS->AddMemorySpace (
+                  EfiGcdMemoryTypeReserved,
+                  PhysicalAddress,
+                  Size,
+                  EFI_MEMORY_WB | EFI_MEMORY_XP | EFI_MEMORY_RUNTIME
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to add OP-TEE comm buffer memory space\n"));
+    return Status;
+  }
+
+  // FIXME: fail to set comm buffer region's attributes
+  Status = gDS->SetMemorySpaceAttributes (
+                  PhysicalAddress,
+                  Size,
+                  EFI_MEMORY_WB | EFI_MEMORY_XP | EFI_MEMORY_RUNTIME
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to set OP-TEE comm buffer attributes\n"));
+    goto CleanAddedMemorySpace;
+  }
+
+  OpteeSharedMemoryInformation.PhysicalBase = PhysicalAddress;
+  OpteeSharedMemoryInformation.VirtualBase = PhysicalAddress;
   OpteeSharedMemoryInformation.Size = Size;
+
+  return EFI_SUCCESS;
+
+CleanAddedMemorySpace:
+  gDS->RemoveMemorySpace (
+         PhysicalAddress,
+         Size
+         );
 
   return EFI_SUCCESS;
 }
 
+EFI_STATUS
+ArchSetVirtualAddressMap (
+  VOID
+  )
+{
+  return EfiConvertPointer (
+           0x0,
+           (VOID **)&OpteeSharedMemoryInformation.PhysicalBase
+           );
+  OpteeSharedMemoryInformation.VirtualBase = OpteeSharedMemoryInformation.PhysicalBase;;
+}
+
+STATIC
+VOID
+EFIAPI
+NotifySetVirtualAddressMap (
+  IN EFI_EVENT  Event,
+  IN VOID      *Context
+  )
+{
+  EFI_STATUS    Status;
+
+  DEBUG ((DEBUG_ERROR, "Optee: set virtual address map\n"));
+#if 0
+  Status = EfiConvertPointer (0x0, (VOID **)&gOpteeClient.OpenSession);
+  ASSERT_EFI_ERROR (Status);
+  Status = EfiConvertPointer (0x0, (VOID **)&gOpteeClient.CloseSession);
+  ASSERT_EFI_ERROR (Status);
+  Status = EfiConvertPointer (0x0, (VOID **)&gOpteeClient.InvokeFunc);
+  ASSERT_EFI_ERROR (Status);
+#endif
+  Status = ArchSetVirtualAddressMap ();
+  ASSERT_EFI_ERROR (Status);
+}
 EFI_STATUS
 EFIAPI
 OpteeInit (
@@ -114,6 +189,16 @@ OpteeInit (
     return Status;
   }
 
+  Status = gBS->CreateEvent (
+                  EVT_SIGNAL_VIRTUAL_ADDRESS_CHANGE,
+                  TPL_NOTIFY,
+                  NotifySetVirtualAddressMap,
+                  NULL,
+                  &mSetVirtualAddressMapEvent
+                  );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
   return EFI_SUCCESS;
 }
 

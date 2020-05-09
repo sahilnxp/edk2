@@ -33,7 +33,8 @@
 #define OPTEE_LOGIN_PUBLIC                      0x0
 
 typedef struct {
-  UINTN    Base;
+  EFI_PHYSICAL_ADDRESS    PhysicalBase;
+  EFI_VIRTUAL_ADDRESS     VirtualBase;
   UINTN    Size;
 } OPTEE_SHARED_MEMORY_INFORMATION;
 
