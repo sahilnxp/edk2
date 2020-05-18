@@ -23,6 +23,9 @@
 
 STATIC OPTEE_SHARED_MEMORY_INFORMATION OpteeSharedMemoryInformation = { 0 };
 
+EFI_VIRTUAL_ADDRESS before_virt_addr = 0;
+EFI_VIRTUAL_ADDRESS after_virt_addr = 0;
+
 /**
   Check for OP-TEE presence.
 **/
@@ -92,7 +95,7 @@ OpteeSharedMemoryRemap (
   }
 
   Status = gDS->AddMemorySpace (
-                  EfiGcdMemoryTypeReserved,
+                  EfiGcdMemoryTypeSystemMemory,
                   PhysicalAddress,
                   Size,
                   EFI_MEMORY_WB | EFI_MEMORY_XP | EFI_MEMORY_RUNTIME
@@ -169,10 +172,16 @@ ArchSetVirtualAddressMap (
   VOID
   )
 {
-  return EfiConvertPointer (
+  EFI_STATUS Status;
+  before_virt_addr = OpteeSharedMemoryInformation.VirtualBase;
+
+  Status = EfiConvertPointer (
            0x0,
            (VOID **)&OpteeSharedMemoryInformation.VirtualBase
            );
+
+  after_virt_addr = OpteeSharedMemoryInformation.VirtualBase;
+  return Status;
 }
 
 STATIC
@@ -204,8 +213,10 @@ OpteeCallWithArg (
 
   ZeroMem (&ArmSmcArgs, sizeof (ARM_SMC_ARGS));
   ArmSmcArgs.Arg0 = OPTEE_SMC_CALL_WITH_ARG;
-  ArmSmcArgs.Arg1 = (UINT32)(PhysicalArg >> 32);
-  ArmSmcArgs.Arg2 = (UINT32)PhysicalArg;
+
+  UINT64 new_addr = (PhysicalArg - after_virt_addr) + before_virt_addr;
+  ArmSmcArgs.Arg1 = (UINT32)(new_addr >> 32);
+  ArmSmcArgs.Arg2 = (UINT32)new_addr;
 
   while (TRUE) {
     ArmCallSmc (&ArmSmcArgs);
@@ -381,7 +392,7 @@ OpteeToMessageParam (
         (VOID *)(UINTN)InParam->Union.Memory.BufferAddress,
         InParam->Union.Memory.Size
         );
-      MessageParam->Union.Memory.BufferAddress = (UINT64)ParamSharedMemoryAddress;
+      MessageParam->Union.Memory.BufferAddress = (UINT64)((ParamSharedMemoryAddress- after_virt_addr) + before_virt_addr);
       MessageParam->Union.Memory.Size = InParam->Union.Memory.Size;
 
       Size = (InParam->Union.Memory.Size + sizeof (UINT64) - 1) &
@@ -443,7 +454,7 @@ OpteeFromMessageParam (
 
       CopyMem (
         (VOID *)(UINTN)OutParam->Union.Memory.BufferAddress,
-        (VOID *)(UINTN)MessageParam->Union.Memory.BufferAddress,
+        (VOID *)(UINTN)((MessageParam->Union.Memory.BufferAddress - before_virt_addr) + after_virt_addr),
         MessageParam->Union.Memory.Size
         );
       OutParam->Union.Memory.Size = MessageParam->Union.Memory.Size;

@@ -155,15 +155,15 @@ NotifySetVirtualAddressMap (
   IN VOID      *Context
   )
 {
+#if 0
   DEBUG ((DEBUG_ERROR, "Handle = %p, AgentHandle = %p, Client = %p, Communicate = %p\n",
 		&mOpteeMm.Handle, &mOpteeMm.AgentHandle, &mOpteeMm.Client, &mOpteeMm.Mm.Communicate));
-  EFI_STATUS  Status;
-#if 0
   Status = EfiConvertPointer (0x0, (VOID **)&mOpteeMm.Handle);
   ASSERT_EFI_ERROR (Status);
   Status = EfiConvertPointer (0x0, (VOID **)&mOpteeMm.AgentHandle);
   ASSERT_EFI_ERROR (Status);
 #endif
+  EFI_STATUS  Status;
   Status = EfiConvertPointer (0x0, (VOID **)&mOpteeMm.Client);
   ASSERT_EFI_ERROR (Status);
   Status = EfiConvertPointer (0x0, (VOID **)&mOpteeMm.Mm.Communicate);
