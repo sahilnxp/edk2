@@ -27,9 +27,9 @@ STATIC OPTEE_SHARED_MEMORY_INFORMATION OpteeSharedMemoryInformation = { 0 };
 
 STATIC EFI_EVENT mSetVirtualAddressMapEvent;
 
-EFI_PHYSICAL_ADDRESS PhysicalAddress = 0;
+EFI_PHYSICAL_ADDRESS before_virt_addr = 0;
 
-EFI_PHYSICAL_ADDRESS VirtualAddress = 0;
+EFI_PHYSICAL_ADDRESS after_virt_addr = 0;
 
 /**
   Check for OP-TEE presence.
@@ -141,11 +141,15 @@ ArchSetVirtualAddressMap (
   VOID
   )
 {
-  return EfiConvertPointer (
+  EFI_STATUS Status;
+  before_virt_addr = OpteeSharedMemoryInformation.VirtualBase;
+  Status = EfiConvertPointer (
            0x0,
-           (VOID **)&OpteeSharedMemoryInformation.PhysicalBase
+           (VOID **)&OpteeSharedMemoryInformation.VirtualBase
            );
-  OpteeSharedMemoryInformation.VirtualBase = OpteeSharedMemoryInformation.PhysicalBase;;
+  after_virt_addr = OpteeSharedMemoryInformation.VirtualBase;
+  DEBUG ((DEBUG_ERROR, "VirtualBase = %lx\n", OpteeSharedMemoryInformation.VirtualBase));
+  return Status;
 }
 
 STATIC
@@ -231,8 +235,10 @@ OpteeCallWithArg (
 
   ZeroMem (&ArmSmcArgs, sizeof (ARM_SMC_ARGS));
   ArmSmcArgs.Arg0 = OPTEE_SMC_CALL_WITH_ARG;
-  ArmSmcArgs.Arg1 = (UINT32)(PhysicalArg >> 32);
-  ArmSmcArgs.Arg2 = (UINT32)PhysicalArg;
+
+  UINT64 new_addr = (PhysicalArg - after_virt_addr) + before_virt_addr;
+  ArmSmcArgs.Arg1 = (UINT32)(new_addr >> 32);
+  ArmSmcArgs.Arg2 = (UINT32)new_addr;
 
   while (TRUE) {
     ArmCallSmc (&ArmSmcArgs);
@@ -285,12 +291,12 @@ OpteeOpenSession (
 
   MessageArg = NULL;
 
-  if (OpteeSharedMemoryInformation.Base == 0) {
+  if (OpteeSharedMemoryInformation.VirtualBase == 0) {
     DEBUG ((DEBUG_WARN, "OP-TEE not initialized\n"));
     return EFI_NOT_STARTED;
   }
 
-  MessageArg = (OPTEE_MESSAGE_ARG *)OpteeSharedMemoryInformation.Base;
+  MessageArg = (OPTEE_MESSAGE_ARG *)OpteeSharedMemoryInformation.VirtualBase;
   ZeroMem (MessageArg, sizeof (OPTEE_MESSAGE_ARG));
 
   MessageArg->Command = OPTEE_MESSAGE_COMMAND_OPEN_SESSION;
@@ -334,12 +340,12 @@ OpteeCloseSession (
 
   MessageArg = NULL;
 
-  if (OpteeSharedMemoryInformation.Base == 0) {
+  if (OpteeSharedMemoryInformation.VirtualBase == 0) {
     DEBUG ((DEBUG_WARN, "OP-TEE not initialized\n"));
     return EFI_NOT_STARTED;
   }
 
-  MessageArg = (OPTEE_MESSAGE_ARG *)OpteeSharedMemoryInformation.Base;
+  MessageArg = (OPTEE_MESSAGE_ARG *)OpteeSharedMemoryInformation.VirtualBase;
   ZeroMem (MessageArg, sizeof (OPTEE_MESSAGE_ARG));
 
   MessageArg->Command = OPTEE_MESSAGE_COMMAND_CLOSE_SESSION;
@@ -365,7 +371,7 @@ OpteeToMessageParam (
 
   Size = (sizeof (OPTEE_MESSAGE_ARG) + sizeof (UINT64) - 1) &
           ~(sizeof (UINT64) - 1);
-  ParamSharedMemoryAddress = OpteeSharedMemoryInformation.Base + Size;
+  ParamSharedMemoryAddress = OpteeSharedMemoryInformation.VirtualBase + Size;
   SharedMemorySize = OpteeSharedMemoryInformation.Size - Size;
 
   for (Idx = 0; Idx < NumParams; Idx++) {
@@ -406,7 +412,7 @@ OpteeToMessageParam (
         (VOID *)(UINTN)InParam->Union.Memory.BufferAddress,
         InParam->Union.Memory.Size
         );
-      MessageParam->Union.Memory.BufferAddress = (UINT64)ParamSharedMemoryAddress;
+      MessageParam->Union.Memory.BufferAddress = (UINT64)((ParamSharedMemoryAddress- after_virt_addr) + before_virt_addr);
       MessageParam->Union.Memory.Size = InParam->Union.Memory.Size;
 
       Size = (InParam->Union.Memory.Size + sizeof (UINT64) - 1) &
@@ -468,7 +474,7 @@ OpteeFromMessageParam (
 
       CopyMem (
         (VOID *)(UINTN)OutParam->Union.Memory.BufferAddress,
-        (VOID *)(UINTN)MessageParam->Union.Memory.BufferAddress,
+        (VOID *)(UINTN)((MessageParam->Union.Memory.BufferAddress - before_virt_addr) + after_virt_addr),
         MessageParam->Union.Memory.Size
         );
       OutParam->Union.Memory.Size = MessageParam->Union.Memory.Size;
@@ -493,12 +499,12 @@ OpteeInvokeFunction (
 
   MessageArg = NULL;
 
-  if (OpteeSharedMemoryInformation.Base == 0) {
+  if (OpteeSharedMemoryInformation.VirtualBase == 0) {
     DEBUG ((DEBUG_WARN, "OP-TEE not initialized\n"));
     return EFI_NOT_STARTED;
   }
 
-  MessageArg = (OPTEE_MESSAGE_ARG *)OpteeSharedMemoryInformation.Base;
+  MessageArg = (OPTEE_MESSAGE_ARG *)OpteeSharedMemoryInformation.VirtualBase;
   ZeroMem (MessageArg, sizeof (OPTEE_MESSAGE_ARG));
 
   MessageArg->Command = OPTEE_MESSAGE_COMMAND_INVOKE_FUNCTION;
