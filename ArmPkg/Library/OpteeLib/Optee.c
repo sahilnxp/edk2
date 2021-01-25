@@ -15,12 +15,21 @@
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 #include <Library/OpteeLib.h>
+#include <Library/DxeServicesTableLib.h>
+#include <Library/UefiRuntimeLib.h>
+#include <Library/UefiBootServicesTableLib.h>
+#include <Library/UefiRuntimeServicesTableLib.h>
 
 #include <IndustryStandard/ArmStdSmc.h>
 #include <OpteeSmc.h>
 #include <Uefi.h>
 
 STATIC OPTEE_SHARED_MEMORY_INFORMATION OpteeSharedMemoryInformation = { 0 };
+
+STATIC EFI_EVENT mSetVirtualAddressMapEvent;
+
+EFI_PHYSICAL_ADDRESS BeforeVirtAddr = 0;
+EFI_PHYSICAL_ADDRESS AfterVirtAddr = 0;
 
 /**
   Check for OP-TEE presence.
@@ -90,10 +99,58 @@ OpteeSharedMemoryRemap (
     return Status;
   }
 
-  OpteeSharedMemoryInformation.Base = (UINTN)PhysicalAddress;
+  Status = gDS->AddMemorySpace (
+                  EfiGcdMemoryTypeReserved,
+                  PhysicalAddress,
+                  Size,
+                  EFI_MEMORY_WB | EFI_MEMORY_XP | EFI_MEMORY_RUNTIME
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to add OP-TEE comm buffer memory space\n"));
+    return Status;
+  }
+
+  Status = gDS->SetMemorySpaceAttributes (
+                  PhysicalAddress,
+                  Size,
+                  EFI_MEMORY_WB | EFI_MEMORY_XP | EFI_MEMORY_RUNTIME
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to set OP-TEE comm buffer attributes\n"));
+    goto CleanAddedMemorySpace;
+  }
+
+  OpteeSharedMemoryInformation.Base = PhysicalAddress;
   OpteeSharedMemoryInformation.Size = Size;
 
   return EFI_SUCCESS;
+
+CleanAddedMemorySpace:
+  gDS->RemoveMemorySpace (
+         PhysicalAddress,
+         Size
+         );
+
+  return EFI_SUCCESS;
+}
+
+STATIC
+VOID
+EFIAPI
+NotifySetVirtualAddressMap (
+  IN EFI_EVENT  Event,
+  IN VOID      *Context
+  )
+{
+  EFI_STATUS    Status;
+
+  BeforeVirtAddr = OpteeSharedMemoryInformation.Base;
+  Status = EfiConvertPointer (
+           0x0,
+           (VOID **)&OpteeSharedMemoryInformation.Base
+           );
+  AfterVirtAddr = OpteeSharedMemoryInformation.Base;
+  ASSERT_EFI_ERROR (Status);
 }
 
 EFI_STATUS
@@ -115,6 +172,16 @@ OpteeInit (
     return Status;
   }
 
+  Status = gBS->CreateEvent (
+                  EVT_SIGNAL_VIRTUAL_ADDRESS_CHANGE,
+                  TPL_NOTIFY,
+                  NotifySetVirtualAddressMap,
+                  NULL,
+                  &mSetVirtualAddressMapEvent
+                  );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
   return EFI_SUCCESS;
 }
 
@@ -147,8 +214,10 @@ OpteeCallWithArg (
 
   ZeroMem (&ArmSmcArgs, sizeof (ARM_SMC_ARGS));
   ArmSmcArgs.Arg0 = OPTEE_SMC_CALL_WITH_ARG;
-  ArmSmcArgs.Arg1 = (UINT32)(PhysicalArg >> 32);
-  ArmSmcArgs.Arg2 = (UINT32)PhysicalArg;
+
+  UINT64 new_addr = (PhysicalArg - AfterVirtAddr) + BeforeVirtAddr;
+  ArmSmcArgs.Arg1 = (UINT32)(new_addr >> 32);
+  ArmSmcArgs.Arg2 = (UINT32)new_addr;
 
   while (TRUE) {
     ArmCallSmc (&ArmSmcArgs);
@@ -202,7 +271,7 @@ OpteeOpenSession (
   MessageArg = NULL;
 
   if (OpteeSharedMemoryInformation.Base == 0) {
-    DEBUG ((DEBUG_WARN, "OP-TEE not initialized\n"));
+    DEBUG ((DEBUG_ERROR, "OP-TEE not initialized\n"));
     return EFI_NOT_STARTED;
   }
 
@@ -229,6 +298,7 @@ OpteeOpenSession (
   MessageArg->NumParams = 2;
 
   if (OpteeCallWithArg ((UINTN)MessageArg) != 0) {
+    DEBUG ((DEBUG_ERROR, "OpteeCallWithArg MessageArg->Return = %x\n", MessageArg->Return));
     MessageArg->Return = OPTEE_ERROR_COMMUNICATION;
     MessageArg->ReturnOrigin = OPTEE_ORIGIN_COMMUNICATION;
   }
@@ -261,7 +331,8 @@ OpteeCloseSession (
   MessageArg->Command = OPTEE_MESSAGE_COMMAND_CLOSE_SESSION;
   MessageArg->Session = Session;
 
-  OpteeCallWithArg ((UINTN)MessageArg);
+  if (OpteeCallWithArg ((UINTN)MessageArg) != OPTEE_SMC_RETURN_OK)
+    return EFI_NOT_FOUND;
 
   return EFI_SUCCESS;
 }
@@ -314,6 +385,7 @@ OpteeToMessageParam (
       MessageParam->Attribute = Attribute;
 
       if (InParam->Union.Memory.Size > SharedMemorySize) {
+        DEBUG ((DEBUG_ERROR, "%s, %d InParam->Union.Memory.Size > SharedMemorySize \n", __func__, __LINE__));
         return EFI_OUT_OF_RESOURCES;
       }
 
@@ -322,7 +394,7 @@ OpteeToMessageParam (
         (VOID *)(UINTN)InParam->Union.Memory.BufferAddress,
         InParam->Union.Memory.Size
         );
-      MessageParam->Union.Memory.BufferAddress = (UINT64)ParamSharedMemoryAddress;
+      MessageParam->Union.Memory.BufferAddress = (UINT64)((ParamSharedMemoryAddress- AfterVirtAddr) + BeforeVirtAddr);
       MessageParam->Union.Memory.Size = InParam->Union.Memory.Size;
 
       Size = (InParam->Union.Memory.Size + sizeof (UINT64) - 1) &
@@ -384,7 +456,7 @@ OpteeFromMessageParam (
 
       CopyMem (
         (VOID *)(UINTN)OutParam->Union.Memory.BufferAddress,
-        (VOID *)(UINTN)MessageParam->Union.Memory.BufferAddress,
+        (VOID *)(UINTN)((MessageParam->Union.Memory.BufferAddress - BeforeVirtAddr) + AfterVirtAddr),
         MessageParam->Union.Memory.Size
         );
       OutParam->Union.Memory.Size = MessageParam->Union.Memory.Size;
