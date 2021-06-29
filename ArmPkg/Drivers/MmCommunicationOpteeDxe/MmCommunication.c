@@ -75,30 +75,33 @@ MmCommunicate (
   EFI_STATUS                    Status;
   OPTEE_MM_SESSION              *OpteeMm;
   OPTEE_INVOKE_FUNCTION_ARG     InvokeArg;
-  STATIC UINTN	num_open_session = 0;
+//  STATIC UINTN	num_open_session = 0;
 
   if (This == NULL || CommBufferPhysical == NULL ||
       CommBufferVirtual == NULL || CommSize == NULL ||
       *CommSize == 0) {
     return EFI_INVALID_PARAMETER;
   }
-
+#if 0
   if (num_open_session) {
 	  DEBUG ((DEBUG_ERROR, "Session already open num_open_session= %u\n",
 			num_open_session));
 	  Status = EFI_DEVICE_ERROR;
 	  goto CLOSE_SESSION;
   }
-
+#endif
   OpteeMm = OPTEE_MM_SESSION_FROM_MM_COMMUNICATION_PROTOCOL_THIS (This);
-try_again:
-  OpteeMm->Session = NewSession ();
-  if (OpteeMm->Session == 0xFFFF) {
-    DEBUG ((DEBUG_ERROR, "%s, %d  NewSession Failed\n", __func__, __LINE__));
-    goto try_again;
-//    return EFI_ACCESS_DENIED;
+//try_again:
+  if (OpteeMm->Session == 0x1234) {
+	  DEBUG ((DEBUG_ERROR, "%s, %d  NewSession opened\n", __func__, __LINE__));
+	  OpteeMm->Session = NewSession ();
+	  if (OpteeMm->Session == 0xFFFF) {
+		  DEBUG ((DEBUG_ERROR, "%s, %d  NewSession Failed\n", __func__, __LINE__));
+		  //    goto try_again;
+		  return EFI_ACCESS_DENIED;
+	  }
   }
-  num_open_session++;
+//  num_open_session++;
 
   ZeroMem (&InvokeArg, sizeof (InvokeArg));
   InvokeArg.Function = OPTEE_TA_MM_FUNC_COMMUNICATE;
@@ -124,9 +127,11 @@ try_again:
   }
 
 CLOSE_SESSION:
+#if 0
   if (OpteeCloseSession (OpteeMm->Session))
 	  DEBUG ((DEBUG_ERROR, "%s, %d, CloseSession Failed \n"));
-  num_open_session--;
+//  num_open_session--;
+#endif
   return Status;
 }
 
@@ -150,7 +155,7 @@ STATIC OPTEE_MM_SESSION mOpteeMm = {
   {
     MmCommunicate,
   },                                  // Mm
-  0,                                  // Session
+  0x1234,                                  // Session
 };
 
 STATIC EFI_GUID* CONST mGuidedEventGuid[] = {
